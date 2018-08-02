@@ -1,0 +1,7 @@
+# Ignore patterns for DrRacket IDE
+*.bak
+*~
+compiled/
+
+# Ignore patterns for VS Code
+.vscode/*
