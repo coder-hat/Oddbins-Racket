@@ -5,3 +5,6 @@ compiled/
 
 # Ignore patterns for VS Code
 .vscode/*
+
+# Ignore patterns for Mac OSX
+.DS_Store
