@@ -1,6 +1,7 @@
 #lang racket
 
 (require racket/draw)
+;(require 2htdp/image) "module: identifier already required also provided by: racket/draw in: make-color"
 
 ; Echo the lines of a (presumed) text file to console.
 ; (Included in this module as a dev convenience.)
@@ -30,6 +31,15 @@
             #:when (is-header-line line))
         (header-key-and-val line)))))
 
+(define (asc-ncols asc-header)
+  (hash-ref asc-header "ncols"))
+
+(define (asc-nrows asc-header)
+  (hash-ref asc-header "nrows"))
+
+(define (asc-nodata asc-header)
+  (hash-ref asc-header "nodata_value"))
+
 ; Split the whitespace-separated words in line into a list of numbers.
 ; Assumes that all the words in the line can be converted to numbers.
 (define (line->numbers line)
@@ -46,17 +56,40 @@
                  #:unless (is-header-line line))
         (append asc-data (line->numbers line))))))
 
+(define (asc-filter-data asc-data v-exclude)
+  (for/list ([v asc-data] #:unless (= v v-exclude)) v))
+
+(define (asc-min-max asc-data)
+  (cons (apply min asc-data) (apply max asc-data)))
+             
 (define (asc-cell-color v no-data-value)
   (if (= v no-data-value)
       (make-color 0 0 0 1.0)
-      (make-color 0 128 255 1.0)))
+      (make-color 64 128 255 1.0)))
 
+; https://stackoverflow.com/questions/5731863/mapping-a-numeric-range-onto-another
+(define (color-norm v v-min v-max)
+  (cond [(< v v-min) 64]
+        [(> v v-max) 255]
+        [else (+ 64 (floor(* (/ (- 255 64) (- v-max v-min)) (- v v-min))))]))
+
+(define (asc-cell-colorist asc-header asc-data)
+  (let* ([no-data (asc-nodata asc-header)]
+         [min-max (asc-min-max (asc-filter-data asc-data no-data))]
+         [red-val (lambda (v) (color-norm v (car min-max) (cdr min-max)))])
+    (lambda (v) (if (= v no-data)
+                    (make-color 0 0 0 1.0)
+                    (make-color (red-val v)
+                                (floor (/ (red-val v) 2))
+                                (floor (/ (red-val v) 4))
+                                1.0)))))
+ 
 (define (asc-bitmap asc-header asc-data)
-  (let* ([asc-width (hash-ref asc-header "ncols")]
-         [asc-height (hash-ref asc-header "nrows")]
+  (let* ([asc-width (asc-ncols asc-header)]
+         [asc-height (asc-nrows asc-header)]
          [asc-total-cells (* asc-width asc-height)]
          [no-data (hash-ref asc-header "nodata_value")]
-         [cell-color (lambda (v) (asc-cell-color v no-data))]
+         [cell-color (asc-cell-colorist asc-header asc-data)]
          [xloc (lambda (i) (modulo i asc-width))]
          [yloc (lambda (i) (quotient i asc-width))]
          [asc-bitmap (make-bitmap asc-width asc-height)]
