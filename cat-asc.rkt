@@ -3,6 +3,10 @@
 (require racket/draw)
 ;(require 2htdp/image) "module: identifier already required also provided by: racket/draw in: make-color"
 
+; 2022-02-08
+; Scaling with flomaps works, but interpolation removes aliasing, so pixels are fuzzy
+; (flomap->bitmap (flomap-resize (bitmap->flomap bm) (* 86 4) (* 67 4)))
+
 ; Echo the lines of a (presumed) text file to console.
 ; (Included in this module as a dev convenience.)
 (define (cat file-name)
