@@ -2,6 +2,8 @@
 
 (require racket/draw)
 ;(require 2htdp/image) "module: identifier already required also provided by: racket/draw in: make-color"
+(require images/flomap) ; for scaling function 
+
 
 ; 2022-02-08
 ; Scaling with flomaps works, but interpolation removes aliasing, so pixels are fuzzy
@@ -75,18 +77,16 @@
 (define (color-norm v v-min v-max)
   (cond [(< v v-min) 64]
         [(> v v-max) 255]
-        [else (+ 64 (floor(* (/ (- 255 64) (- v-max v-min)) (- v v-min))))]))
+        [else (inexact->exact(+ 64 (floor(* (/ (- 255 64) (- v-max v-min)) (- v v-min)))))]))
 
 (define (asc-cell-colorist asc-header asc-data)
   (let* ([no-data (asc-nodata asc-header)]
          [min-max (asc-min-max (asc-filter-data asc-data no-data))]
          [red-val (lambda (v) (color-norm v (car min-max) (cdr min-max)))])
+    (printf "red-val=~a min-max=~a" red-val min-max)
     (lambda (v) (if (= v no-data)
                     (make-color 0 0 0 1.0)
-                    (make-color (red-val v)
-                                (floor (/ (red-val v) 2))
-                                (floor (/ (red-val v) 4))
-                                1.0)))))
+                    (make-color (red-val v) (red-val v) (red-val v) 1.0)))))
  
 (define (asc-bitmap asc-header asc-data)
   (let* ([asc-width (asc-ncols asc-header)]
@@ -104,6 +104,10 @@
       (send asc-dc set-pixel (xloc i) (yloc i) (cell-color v))
       (+ i 1))
     asc-bitmap))
+
+(define (scale-asc-bitmap asc-bitmap scale)
+  (flomap->bitmap (flomap-scale (bitmap->flomap asc-bitmap) scale)))
+
 
 
     
